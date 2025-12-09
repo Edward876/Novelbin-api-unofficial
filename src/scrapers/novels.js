@@ -5,8 +5,15 @@ const BASE_URL = 'https://novelbin.me';
 async function scrapePopularNovels() {
     const page = await getPage();
     try {
-        await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto(BASE_URL, { waitUntil: 'networkidle2', timeout: 60000 });
         
+        // Wait for selector to ensure content is loaded
+        try {
+            await page.waitForSelector('.index-novel .item', { timeout: 5000 });
+        } catch (e) {
+            console.log('Selector .index-novel .item not found');
+        }
+
         const novels = await page.$$eval('.index-novel .item', items => items.map(i => {
             const titleEl = i.querySelector('.title h3');
             const linkEl = i.querySelector('a');
