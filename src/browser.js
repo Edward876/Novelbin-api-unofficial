@@ -2,25 +2,34 @@ const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 
 let browser;
+let launchPromise;
 
 async function startBrowser() {
-    if (!browser) {
+    if (browser && browser.isConnected()) return browser;
+
+    if (launchPromise) return launchPromise;
+
+    launchPromise = (async () => {
         try {
-            browser = await puppeteer.launch({
+            console.log('Launching browser...');
+            const newBrowser = await puppeteer.launch({
                 args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
                 defaultViewport: chromium.defaultViewport,
                 executablePath: await chromium.executablePath() || process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
                 headless: chromium.headless,
                 ignoreHTTPSErrors: true,
             });
+            console.log('Browser launched');
+            return newBrowser;
         } catch (error) {
             console.error('Failed to launch browser:', error);
-            // Fallback for local development if full puppeteer is installed or chrome is available
-            // This part is tricky without full puppeteer, but we'll assume the user wants Vercel support primarily.
             throw error;
+        } finally {
+            launchPromise = null;
         }
-        console.log('Browser launched');
-    }
+    })();
+
+    browser = await launchPromise;
     return browser;
 }
 
