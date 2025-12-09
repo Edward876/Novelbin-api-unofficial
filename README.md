@@ -2,6 +2,8 @@
 
 An unofficial REST API for [NovelBin](https://novelbin.me/), built with Node.js, Express, and Puppeteer.
 
+**Live Demo:** [https://novelbin-api-unofficial.vercel.app/](https://novelbin-api-unofficial.vercel.app/)
+
 ## Features
 
 - **Popular Novels**: Get a list of popular novels.
@@ -11,46 +13,46 @@ An unofficial REST API for [NovelBin](https://novelbin.me/), built with Node.js,
 - **Chapter Content**: Read the content of a specific chapter.
 - **Lightweight**: Optimized for performance.
 
-## Endpoints
+## Endpoints & Usage Examples
+
+Base URL: `https://novelbin-api-unofficial.vercel.app`
 
 ### 1. Get Popular Novels
-```http
-GET /novels/popular
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/popular
 ```
 
 ### 2. Get Latest Novels
-```http
-GET /novels/latest
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/latest
 ```
 
 ### 3. Search Novels
-```http
-GET /novels/search?keyword=shadow
+```bash
+curl "https://novelbin-api-unofficial.vercel.app/novels/search?keyword=shadow"
 ```
 
 ### 4. Get Novel Details
-```http
-GET /novels/:id
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/shadow-slave
 ```
-Example: `/novels/shadow-slave`
 
 ### 5. Get Novel Info (Metadata Only)
-```http
-GET /novels/:id/info
-```
 Returns details without the chapter list (faster response).
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/shadow-slave/info
+```
 
 ### 6. Get Novel Cover
-```http
-GET /novels/:id/cover
-```
 Returns the cover image URL.
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/shadow-slave/cover
+```
 
 ### 7. Get Chapter Content
-```http
-GET /novels/:id/chapters/:chapterId
+```bash
+curl https://novelbin-api-unofficial.vercel.app/novels/shadow-slave/chapters/chapter-1-nightmare-begins
 ```
-Example: `/novels/shadow-slave/chapters/chapter-1-nightmare-begins`
 
 ## Deployment
 
