@@ -1,172 +1,209 @@
-const { getPage } = require('../browser');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
 const BASE_URL = 'https://novelbin.me';
 
-async function scrapePopularNovels() {
-    const page = await getPage();
-    try {
-        await page.goto(BASE_URL, { waitUntil: 'networkidle2', timeout: 60000 });
-        
-        // Wait for selector to ensure content is loaded
-        try {
-            await page.waitForSelector('.index-novel .item', { timeout: 5000 });
-        } catch (e) {
-            console.log('Selector .index-novel .item not found');
-        }
+const axiosInstance = axios.create({
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+});
 
-        const novels = await page.$$eval('.index-novel .item', items => items.map(i => {
-            const titleEl = i.querySelector('.title h3');
-            const linkEl = i.querySelector('a');
-            const imgEl = i.querySelector('img');
-            return {
-                title: titleEl?.innerText?.trim(),
-                url: linkEl?.href,
-                id: linkEl?.href?.split('/').pop(),
-                cover: imgEl?.getAttribute('data-src') || imgEl?.src
-            };
-        }));
+async function scrapePopularNovels() {
+    try {
+        const { data } = await axiosInstance.get(BASE_URL);
+        const $ = cheerio.load(data);
         
-        return novels.filter(n => n.title);
+        const novels = [];
+        $('.index-novel .item').each((i, el) => {
+            const titleEl = $(el).find('.title h3');
+            const linkEl = $(el).find('a').first();
+            const imgEl = $(el).find('img');
+            
+            const title = titleEl.text().trim();
+            const url = linkEl.attr('href');
+            const id = url ? url.split('/').pop() : null;
+            const cover = imgEl.attr('data-src') || imgEl.attr('src');
+
+            if (title) {
+                novels.push({ 
+                    title, 
+                    url: url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : null, 
+                    id, 
+                    cover 
+                });
+            }
+        });
+        
+        return novels;
     } catch (error) {
         console.error('Error scraping popular novels:', error);
         throw error;
-    } finally {
-        await page.close();
     }
 }
 
 async function scrapeLatestNovels() {
-    const page = await getPage();
     try {
-        await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        const { data } = await axiosInstance.get(BASE_URL);
+        const $ = cheerio.load(data);
         
-        const novels = await page.$$eval('.list-new .row', items => items.map(i => {
-            const titleEl = i.querySelector('.col-title a');
-            const genreEl = i.querySelector('.col-genre a');
-            const chapterEl = i.querySelector('.col-chapter a');
-            return {
-                title: titleEl?.innerText?.trim(),
-                url: titleEl?.href,
-                id: titleEl?.href?.split('/').pop(),
-                genre: genreEl?.innerText?.trim(),
-                latestChapter: chapterEl?.innerText?.trim()
-            };
-        }));
+        const novels = [];
+        $('.list-new .row').each((i, el) => {
+            const titleEl = $(el).find('.col-title a');
+            const genreEl = $(el).find('.col-genre a');
+            const chapterEl = $(el).find('.col-chapter a');
+            
+            const title = titleEl.text().trim();
+            const url = titleEl.attr('href');
+            
+            if (title) {
+                novels.push({
+                    title,
+                    url: url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : null,
+                    id: url ? url.split('/').pop() : null,
+                    genre: genreEl.text().trim(),
+                    latestChapter: chapterEl.text().trim()
+                });
+            }
+        });
         
-        return novels.filter(n => n.title);
+        return novels;
     } catch (error) {
         console.error('Error scraping latest novels:', error);
         throw error;
-    } finally {
-        await page.close();
     }
 }
 
-async function scrapeSearch(keyword, pageNum = 1) {
-    const page = await getPage();
+async function scrapeSearch(keyword) {
     try {
-        const searchUrl = `${BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`; // Pagination might be needed if supported
-        await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        const searchUrl = `${BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`;
+        const { data } = await axiosInstance.get(searchUrl);
+        const $ = cheerio.load(data);
         
-        const novels = await page.$$eval('.list-novel .row', items => items.map(i => {
-            const titleEl = i.querySelector('.novel-title a');
-            const authorEl = i.querySelector('.author');
-            const imgEl = i.querySelector('img.cover');
-            return {
-                title: titleEl?.innerText?.trim(),
-                url: titleEl?.href,
-                id: titleEl?.href?.split('/').pop(),
-                author: authorEl?.innerText?.trim(),
-                cover: imgEl?.getAttribute('data-src') || imgEl?.src
-            };
-        }));
+        const novels = [];
+        $('.list-novel .row').each((i, el) => {
+            const titleEl = $(el).find('.novel-title a');
+            const authorEl = $(el).find('.author');
+            const imgEl = $(el).find('img.cover');
+            
+            const title = titleEl.text().trim();
+            const url = titleEl.attr('href');
+            
+            if (title) {
+                novels.push({
+                    title,
+                    url: url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : null,
+                    id: url ? url.split('/').pop() : null,
+                    author: authorEl.text().trim(),
+                    cover: imgEl.attr('data-src') || imgEl.attr('src')
+                });
+            }
+        });
         
-        return novels.filter(n => n.title);
+        return novels;
     } catch (error) {
         console.error('Error scraping search results:', error);
         throw error;
-    } finally {
-        await page.close();
     }
 }
 
 async function scrapeNovelDetails(id) {
-    const page = await getPage();
     try {
         const url = `${BASE_URL}/novel-book/${id}`;
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        const { data } = await axiosInstance.get(url);
+        const $ = cheerio.load(data);
         
-        const details = await page.evaluate(() => {
-            const title = document.querySelector('h3.title')?.innerText?.trim();
-            const imgEl = document.querySelector('.book img');
-            const cover = imgEl?.getAttribute('data-src') || imgEl?.src;
-            const description = document.querySelector('.desc-text')?.innerText?.trim();
-            
-            // Helper to find metadata by label
-            const getMeta = (label) => {
-                const h3s = Array.from(document.querySelectorAll('h3'));
-                const labelH3 = h3s.find(h => h.innerText.includes(label));
-                if (labelH3) {
-                    // Try next sibling
-                    let next = labelH3.nextElementSibling;
-                    if (next) return next.innerText?.trim();
-                    // Or maybe it's inside the same parent's text?
-                    // Or maybe it's a list item?
-                    return labelH3.parentElement?.innerText?.replace(label, '').trim();
-                }
-                return null;
-            };
+        const title = $('h3.title').text().trim();
+        const imgEl = $('.book img');
+        const cover = imgEl.attr('data-src') || imgEl.attr('src');
+        const description = $('.desc-text').text().trim();
+        
+        const getMeta = (label) => {
+            const li = $('ul.info li').filter((i, el) => $(el).text().includes(label));
+            if (li.length) {
+                const value = li.find('a').text().trim();
+                if (value) return value;
+                return li.text().replace(label, '').trim();
+            }
+            return null;
+        };
 
-            const author = getMeta('Author:');
-            const status = getMeta('Status:');
-            const publishers = getMeta('Publishers:');
-            const year = getMeta('Year of publishing:');
-            const genres = Array.from(document.querySelectorAll('.categories a')).map(a => a.innerText?.trim());
+        const getMetaFallback = (label) => {
+             const labelEl = $('h3').filter((i, el) => $(el).text().includes(label));
+             if (labelEl.length) {
+                 const next = labelEl.next();
+                 if (next.length && next.text().trim()) return next.text().trim();
+                 return labelEl.parent().text().replace(label, '').trim();
+             }
+             return null;
+        }
 
-            return { title, author, description, cover, genres, status, publishers, year };
+        const author = getMeta('Author:') || getMetaFallback('Author:');
+        const status = getMeta('Status:') || getMetaFallback('Status:');
+        const publishers = getMeta('Publishers:') || getMetaFallback('Publishers:');
+        const year = getMeta('Year of publishing:') || getMetaFallback('Year of publishing:');
+        
+        const genres = [];
+        $('.categories a').each((i, el) => {
+            genres.push($(el).text().trim());
         });
 
-        // Get chapters
-        const chapters = await page.$$eval('ul.list-chapter li a', links => links.map(l => ({
-            title: l.innerText?.trim(),
-            id: l.href.split('/').pop(),
-            url: l.href
-        })));
+        const chapters = [];
+        $('ul.list-chapter li a').each((i, el) => {
+            const link = $(el);
+            const href = link.attr('href');
+            chapters.push({
+                title: link.text().trim(),
+                id: href ? href.split('/').pop() : null,
+                url: href
+            });
+        });
 
-        return { ...details, id, chapters };
+        return { 
+            title, 
+            author, 
+            description, 
+            cover, 
+            genres, 
+            status, 
+            publishers, 
+            year, 
+            id, 
+            chapters 
+        };
     } catch (error) {
         console.error(`Error scraping novel details for ${id}:`, error);
         throw error;
-    } finally {
-        await page.close();
     }
 }
 
 async function scrapeChapterContent(novelId, chapterId) {
-    const page = await getPage();
     try {
         const url = `${BASE_URL}/novel-book/${novelId}/${chapterId}`;
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        const { data } = await axiosInstance.get(url);
+        const $ = cheerio.load(data);
         
-        const content = await page.evaluate(() => {
-            const title = document.querySelector('.chr-title')?.innerText?.trim();
-            const contentEl = document.querySelector('#chr-content');
-            
-            // Remove ads or unwanted elements if necessary
-            // contentEl.querySelectorAll('.ads').forEach(e => e.remove());
-            
-            return {
-                title,
-                content: contentEl?.innerText // or innerHTML if we want formatting
-            };
-        });
+        const title = $('.chr-title').text().trim();
+        const contentEl = $('#chr-content');
+        
+        let content = '';
+        if (contentEl.find('p').length > 0) {
+             contentEl.find('p').each((i, el) => {
+                 content += $(el).text().trim() + '\n\n';
+             });
+        } else {
+            content = contentEl.text().trim();
+        }
 
-        return { ...content, novelId, chapterId };
+        return { 
+            title, 
+            content: content.trim(), 
+            novelId, 
+            chapterId 
+        };
     } catch (error) {
         console.error(`Error scraping chapter content for ${novelId}/${chapterId}:`, error);
         throw error;
-    } finally {
-        await page.close();
     }
 }
 

@@ -6,15 +6,11 @@ const {
     scrapeNovelDetails, 
     scrapeChapterContent 
 } = require('./scrapers/novels');
-const { startBrowser } = require('./browser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-
-// Initialize browser on start
-startBrowser().catch(console.error);
 
 // Routes
 
