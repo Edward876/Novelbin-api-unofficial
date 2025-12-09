@@ -1,30 +1,12 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import { gotScraping } from 'got-scraping';
+import * as cheerio from 'cheerio';
 
 const BASE_URL = 'https://novelbin.me';
 
-const axiosInstance = axios.create({
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://novelbin.me/',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
-    },
-    timeout: 15000
-});
-
 async function scrapePopularNovels() {
     try {
-        const { data } = await axiosInstance.get(BASE_URL);
-        const $ = cheerio.load(data);
+        const { body } = await gotScraping.get(BASE_URL);
+        const $ = cheerio.load(body);
         
         const novels = [];
         $('.index-novel .item').each((i, el) => {
@@ -46,26 +28,18 @@ async function scrapePopularNovels() {
                 });
             }
         });
-
-        if (novels.length === 0) {
-            console.log('Warning: No popular novels found. Response preview:', data.substring(0, 500));
-        }
         
         return novels;
     } catch (error) {
-        console.error('Error scraping popular novels:', error.message);
-        if (error.response) {
-            console.error('Response status:', error.response.status);
-            console.error('Response data preview:', error.response.data.substring(0, 200));
-        }
+        console.error('Error scraping popular novels:', error);
         throw error;
     }
 }
 
 async function scrapeLatestNovels() {
     try {
-        const { data } = await axiosInstance.get(BASE_URL);
-        const $ = cheerio.load(data);
+        const { body } = await gotScraping.get(BASE_URL);
+        const $ = cheerio.load(body);
         
         const novels = [];
         $('.list-new .row').each((i, el) => {
@@ -97,8 +71,8 @@ async function scrapeLatestNovels() {
 async function scrapeSearch(keyword) {
     try {
         const searchUrl = `${BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`;
-        const { data } = await axiosInstance.get(searchUrl);
-        const $ = cheerio.load(data);
+        const { body } = await gotScraping.get(searchUrl);
+        const $ = cheerio.load(body);
         
         const novels = [];
         $('.list-novel .row').each((i, el) => {
@@ -130,8 +104,8 @@ async function scrapeSearch(keyword) {
 async function scrapeNovelDetails(id) {
     try {
         const url = `${BASE_URL}/novel-book/${id}`;
-        const { data } = await axiosInstance.get(url);
-        const $ = cheerio.load(data);
+        const { body } = await gotScraping.get(url);
+        const $ = cheerio.load(body);
         
         const title = $('h3.title').text().trim();
         const imgEl = $('.book img');
@@ -200,8 +174,8 @@ async function scrapeNovelDetails(id) {
 async function scrapeChapterContent(novelId, chapterId) {
     try {
         const url = `${BASE_URL}/novel-book/${novelId}/${chapterId}`;
-        const { data } = await axiosInstance.get(url);
-        const $ = cheerio.load(data);
+        const { body } = await gotScraping.get(url);
+        const $ = cheerio.load(body);
         
         const title = $('.chr-title').text().trim();
         const contentEl = $('#chr-content');
@@ -227,7 +201,7 @@ async function scrapeChapterContent(novelId, chapterId) {
     }
 }
 
-module.exports = {
+export {
     scrapePopularNovels,
     scrapeLatestNovels,
     scrapeSearch,

@@ -1,11 +1,11 @@
-const express = require('express');
-const { 
+import express from 'express';
+import { 
     scrapePopularNovels, 
     scrapeLatestNovels, 
     scrapeSearch, 
     scrapeNovelDetails, 
     scrapeChapterContent 
-} = require('./scrapers/novels');
+} from './scrapers/novels.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -128,10 +128,12 @@ app.get('/novels/:id/chapters/:chapterId', async (req, res) => {
     }
 });
 
-if (require.main === module) {
+// Export for Vercel
+export default app;
+
+// Start server if running directly
+if (process.argv[1] === new URL(import.meta.url).pathname) {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
 }
-
-module.exports = app;
